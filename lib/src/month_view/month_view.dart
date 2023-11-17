@@ -138,12 +138,9 @@ class MonthView<T extends Object?> extends StatefulWidget {
   /// Option for SafeArea.
   final SafeAreaOption safeAreaOption;
 
-  /// Callback for the Header title
-  final HeaderTitleCallback? onHeaderTitleTap;
-
   /// Main [Widget] to display month view.
   const MonthView({
-    Key? key,
+    super.key,
     this.showBorder = true,
     this.borderColor = Constants.defaultBorderColor,
     this.cellBuilder,
@@ -169,10 +166,7 @@ class MonthView<T extends Object?> extends StatefulWidget {
     this.weekDayStringBuilder,
     this.headerStyle = const HeaderStyle(),
     this.safeAreaOption = const SafeAreaOption(),
-    this.onHeaderTitleTap,
-  })  : assert(!(onHeaderTitleTap != null && headerBuilder != null),
-            "can't use [onHeaderTitleTap] & [headerBuilder] simultaneously"),
-        super(key: key);
+  });
 
   @override
   MonthViewState<T> createState() => MonthViewState<T>();
@@ -325,12 +319,10 @@ class MonthViewState<T extends Object?> extends State<MonthView<T>> {
                       ),
                       Expanded(
                         child: LayoutBuilder(builder: (context, constraints) {
-                          final _cellAspectRatio =
-                              widget.useAvailableVerticalSpace
-                                  ? calculateCellAspectRatio(
-                                      constraints.maxHeight,
-                                    )
-                                  : widget.cellAspectRatio;
+                          final _cellAspectRatio = widget
+                                  .useAvailableVerticalSpace
+                              ? calculateCellAspectRatio(constraints.maxHeight)
+                              : widget.cellAspectRatio;
 
                           return SizedBox(
                             height: _height,
@@ -468,19 +460,15 @@ class MonthViewState<T extends Object?> extends State<MonthView<T>> {
   Widget _defaultHeaderBuilder(DateTime date) {
     return MonthPageHeader(
       onTitleTapped: () async {
-        if (widget.onHeaderTitleTap != null) {
-          widget.onHeaderTitleTap!(date);
-        } else {
-          final selectedDate = await showDatePicker(
-            context: context,
-            initialDate: date,
-            firstDate: _minDate,
-            lastDate: _maxDate,
-          );
+        final selectedDate = await showDatePicker(
+          context: context,
+          initialDate: date,
+          firstDate: _minDate,
+          lastDate: _maxDate,
+        );
 
-          if (selectedDate == null) return;
-          jumpToMonth(selectedDate);
-        }
+        if (selectedDate == null) return;
+        jumpToMonth(selectedDate);
       },
       onPreviousMonth: previousPage,
       date: date,
@@ -500,7 +488,12 @@ class MonthViewState<T extends Object?> extends State<MonthView<T>> {
 
   /// Default cell builder. Used when [widget.cellBuilder] is null
   Widget _defaultCellBuilder(
-      date, List<CalendarEventData<T>> events, isToday, isInMonth) {
+    date,
+    List<CalendarEventData<T>> events,
+    isToday,
+    isInMonth,
+    position,
+  ) {
     return FilledCell<T>(
       date: date,
       shouldHighlight: isToday,
@@ -600,7 +593,7 @@ class _MonthPageBuilder<T> extends StatelessWidget {
   final WeekDays startDay;
 
   const _MonthPageBuilder({
-    Key? key,
+    super.key,
     required this.cellRatio,
     required this.showBorder,
     required this.borderSize,
@@ -613,7 +606,7 @@ class _MonthPageBuilder<T> extends StatelessWidget {
     required this.onCellTap,
     required this.onDateLongPress,
     required this.startDay,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +615,6 @@ class _MonthPageBuilder<T> extends StatelessWidget {
       width: width,
       height: height,
       child: GridView.builder(
-        padding: EdgeInsets.zero,
         physics: ClampingScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 7,
@@ -638,10 +630,7 @@ class _MonthPageBuilder<T> extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 border: showBorder
-                    ? Border.all(
-                        color: borderColor,
-                        width: borderSize,
-                      )
+                    ? Border.all(color: borderColor, width: borderSize)
                     : null,
               ),
               child: cellBuilder(
@@ -649,6 +638,7 @@ class _MonthPageBuilder<T> extends StatelessWidget {
                 events,
                 monthDays[index].compareWithoutTime(DateTime.now()),
                 monthDays[index].month == date.month,
+                _positionFromIndex(index),
               ),
             ),
           );
@@ -656,4 +646,33 @@ class _MonthPageBuilder<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+/// This returns the [CellPosition] for a cell.
+///
+/// The method leverages the fact that a MonthView never
+/// changes in Rows and Columns, always being 7 Columns
+/// and 6 Rows.
+CellPosition _positionFromIndex(int index) => switch (index) {
+      0 => CellPosition.topLeft,
+      1 || 2 || 3 || 4 || 5 => CellPosition.top,
+      6 => CellPosition.topRight,
+      7 || 14 || 21 || 28 => CellPosition.left,
+      35 => CellPosition.bottomLeft,
+      36 || 37 || 38 || 39 || 40 => CellPosition.bottom,
+      41 => CellPosition.bottomRight,
+      13 || 20 || 27 || 34 => CellPosition.right,
+      _ => CellPosition.middle,
+    };
+
+enum CellPosition {
+  topLeft,
+  top,
+  topRight,
+  bottomLeft,
+  bottom,
+  bottomRight,
+  left,
+  right,
+  middle,
 }
