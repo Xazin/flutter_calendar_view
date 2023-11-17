@@ -171,7 +171,8 @@ extension MyList on List<CalendarEventData> {
   void addEventInSortedManner(CalendarEventData event) {
     var addIndex = -1;
     for (var i = 0; i < this.length; i++) {
-      if (event.startTime!.compareTo(this[i].startTime!) <= 0) {
+      final startTime = event.startTime != null ? event.startTime! : event.date;
+      if (startTime.compareTo(this[i].startTime ?? this[i].date) <= 0) {
         addIndex = i;
         break;
       }
